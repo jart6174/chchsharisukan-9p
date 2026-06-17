@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin Panel — Scoreboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0d14;
+    --surface: #13131e;
+    --surface2: #1a1a28;
+    --border: #22223a;
+    --accent: #f5c518;
+    --accent2: #ff6b35;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --gold: #FFD700;
+    --silver: #C0C0C0;
+    --bronze: #CD7F32;
+    --yellow-team: #f5c518;
+    --blue-team: #3b82f6;
+    --red-team: #ef4444;
+    --green-team: #22c55e;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height:100vh;
+  }
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(245,197,24,.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,197,24,.02) 1px, transparent 1px);
+    background-size:60px 60px;
+    pointer-events:none; z-index:0;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    background: var(--surface);
+    border-bottom:1px solid var(--border);
+    padding:0 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    height:60px;
+    position:sticky; top:0; z-index:100;
+  }
+  .topbar-brand {
+    font-family:'Bebas Neue', sans-serif;
+    font-size:1.5rem;
+    letter-spacing:3px;
+    background: linear-gradient(135deg, #f5c518, #ff9500);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text;
+  }
+  .topbar-right { display:flex; align-items:center; gap:12px; }
+  .lang-toggle {
+    display:flex; align-items:center; gap:6px;
+    background: var(--surface2);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:5px 6px;
+  }
+  .lang-btn {
+    padding:4px 12px; border-radius:999px; border:none;
+    cursor:pointer; font-family:'Outfit', sans-serif;
+    font-size:.8rem; font-weight:600; letter-spacing:1px;
+    transition: all .2s;
+    background:transparent; color:var(--muted);
+  }
+  .lang-btn.active { background:var(--accent); color:#000; }
+  .view-btn {
+    background: var(--surface2);
+    border:1px solid var(--border);
+    color:var(--text); padding:7px 16px;
+    border-radius:8px; cursor:pointer;
+    font-family:'Outfit', sans-serif; font-size:.82rem;
+    text-decoration:none; display:inline-block;
+    transition: border-color .2s;
+  }
+  .view-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ── Layout ── */
+  .layout {
+    display:grid; grid-template-columns:260px 1fr;
+    min-height:calc(100vh - 60px);
+    position:relative; z-index:1;
+  }
+  .sidebar {
+    background:var(--surface);
+    border-right:1px solid var(--border);
+    padding:24px 0;
+  }
+  .sidebar-section { margin-bottom:8px; }
+  .sidebar-label {
+    padding:8px 20px;
+    font-size:.68rem; letter-spacing:2px; text-transform:uppercase;
+    color:var(--muted); font-weight:600;
+  }
+  .sidebar-item {
+    display:flex; align-items:center; gap:10px;
+    padding:11px 20px; cursor:pointer;
+    font-size:.9rem; color:var(--muted);
+    transition: all .15s; border-left:3px solid transparent;
+  }
+  .sidebar-item:hover { color:var(--text); background:rgba(255,255,255,.03); }
+  .sidebar-item.active { color:var(--accent); background:rgba(245,197,24,.06); border-left-color:var(--accent); }
+  .sidebar-icon { font-size:1.1rem; }
+
+  /* ── Main content ── */
+  .main { padding:32px; overflow-y:auto; }
+  .page { display:none; }
+  .page.active { display:block; }
+
+  .page-title {
+    font-family:'Bebas Neue', sans-serif;
+    font-size:2rem; letter-spacing:3px;
+    color:var(--accent); margin-bottom:24px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px; padding:24px;
+    margin-bottom:20px;
+  }
+  .card-title {
+    font-size:.75rem; letter-spacing:2px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:16px; font-weight:600;
+  }
+
+  /* ── Form elements ── */
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+  .form-group { display:flex; flex-direction:column; gap:6px; }
+  .form-group.full { grid-column:1/-1; }
+  label { font-size:.78rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
+  input, select, textarea {
+    background:var(--surface2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:10px 14px; border-radius:8px;
+    font-family:'Outfit', sans-serif; font-size:.9rem;
+    transition: border-color .2s;
+    width:100%;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline:none; border-color:var(--accent);
+  }
+  input::placeholder { color:var(--muted); }
+  select option { background:var(--surface2); }
+
+  /* ── Medal selector ── */
+  .medal-selector { display:flex; gap:10px; }
+  .medal-opt {
+    flex:1; padding:12px; border-radius:10px;
+    border:2px solid var(--border);
+    cursor:pointer; text-align:center;
+    transition: all .2s;
+    background:var(--surface2);
+  }
+  .medal-opt:hover { border-color:var(--muted); }
+  .medal-opt.selected-gold { border-color:#FFD700; background:rgba(255,215,0,.1); }
+  .medal-opt.selected-silver { border-color:#C0C0C0; background:rgba(192,192,192,.1); }
+  .medal-opt.selected-bronze { border-color:#CD7F32; background:rgba(205,127,50,.1); }
+  .medal-opt .medal-emoji { font-size:1.6rem; display:block; margin-bottom:4px; }
+  .medal-opt .medal-label { font-size:.72rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
+
+  /* ── Team selector ── */
+  .team-selector { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .team-opt {
+    padding:12px 16px; border-radius:10px;
+    border:2px solid var(--border);
+    cursor:pointer; display:flex; align-items:center; gap:10px;
+    transition:all .2s; background:var(--surface2);
+  }
+  .team-opt:hover { border-color:var(--muted); }
+  .team-opt.selected { border-width:2px; }
+  .team-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+  .team-label { font-size:.85rem; font-weight:600; }
+
+  /* ── Buttons ── */
+  .btn {
+    padding:11px 24px; border-radius:8px; border:none;
+    cursor:pointer; font-family:'Outfit', sans-serif;
+    font-size:.9rem; font-weight:600; letter-spacing:.5px;
+    transition:all .2s; display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn-primary { background:var(--accent); color:#000; }
+  .btn-primary:hover { background:#e6b800; transform:translateY(-1px); }
+  .btn-danger { background:var(--danger); color:#fff; }
+  .btn-danger:hover { background:#dc2626; }
+  .btn-ghost {
+    background:transparent; color:var(--muted);
+    border:1px solid var(--border);
+  }
+  .btn-ghost:hover { color:var(--text); border-color:var(--muted); }
+  .btn-success { background:var(--success); color:#000; }
+
+  /* ── Tables ── */
+  .data-table { width:100%; border-collapse:collapse; }
+  .data-table th {
+    padding:10px 16px; text-align:left;
+    font-size:.7rem; letter-spacing:2px; text-transform:uppercase;
+    color:var(--muted); border-bottom:1px solid var(--border);
+  }
+  .data-table td { padding:12px 16px; border-bottom:1px solid var(--border); font-size:.88rem; }
+  .data-table tr:last-child td { border-bottom:none; }
+  .data-table tr:hover td { background:rgba(255,255,255,.02); }
+  .badge {
+    display:inline-block; padding:3px 10px; border-radius:999px;
+    font-size:.72rem; font-weight:600; letter-spacing:1px; text-transform:uppercase;
+  }
+  .badge-gold { background:rgba(255,215,0,.15); color:#FFD700; border:1px solid rgba(255,215,0,.3); }
+  .badge-silver { background:rgba(192,192,192,.15); color:#C0C0C0; border:1px solid rgba(192,192,192,.3); }
+  .badge-bronze { background:rgba(205,127,50,.15); color:#CD7F32; border:1px solid rgba(205,127,50,.3); }
+
+  .team-pill {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:3px 10px; border-radius:999px;
+    font-size:.78rem; font-weight:600;
+    border:1px solid;
+  }
+  .pill-kuning { background:rgba(245,197,24,.1); color:#f5c518; border-color:rgba(245,197,24,.3); }
+  .pill-biru   { background:rgba(59,130,246,.1); color:#3b82f6; border-color:rgba(59,130,246,.3); }
+  .pill-merah  { background:rgba(239,68,68,.1);  color:#ef4444; border-color:rgba(239,68,68,.3); }
+  .pill-hijau  { background:rgba(34,197,94,.1);  color:#22c55e; border-color:rgba(34,197,94,.3); }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; bottom:24px; right:24px;
+    background:var(--success); color:#000;
+    padding:12px 20px; border-radius:10px;
+    font-weight:600; font-size:.9rem;
+    transform:translateY(80px); opacity:0;
+    transition:all .3s; z-index:999;
+    display:flex; align-items:center; gap:8px;
+  }
+  .toast.error { background:var(--danger); color:#fff; }
+  .toast.show { transform:translateY(0); opacity:1; }
+
+  /* ── Stats strip ── */
+  .stats-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+  .stat-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:18px 20px;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .stat-val { font-family:'Bebas Neue', sans-serif; font-size:2.2rem; color:var(--accent); }
+  .stat-label { font-size:.72rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+
+  /* ── Divider ── */
+  .divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
+
+  /* ── Search bar ── */
+  .search-row { display:flex; gap:10px; margin-bottom:16px; }
+  .search-row input { flex:1; }
+
+  /* ── Responsive ── */
+  @media(max-width:768px){
+    .layout { grid-template-columns:1fr; }
+    .sidebar { display:none; }
+    .form-grid, .form-grid-3 { grid-template-columns:1fr; }
+    .stats-strip { grid-template-columns:1fr 1fr; }
+  }
+
+  /* ── Footer ── */
+  footer {
+    border-top:1px solid var(--border);
+    padding:20px 28px;
+    text-align:center;
+    color:var(--muted);
+    font-size:.78rem;
+    line-height:1.9;
+    position:relative; z-index:1;
+  }
+  footer a { color:var(--accent); text-decoration:none; }
+  footer a:hover { text-decoration:underline; }
+  footer .brand { font-weight:700; color:var(--text); }
+
+  .hidden-medal { display:none; }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-brand" data-i18n="adminTitle">ADMIN PANEL</div>
+  <div class="topbar-right">
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" id="lang-ms" onclick="setLang('ms')">BM</button>
+    </div>
+    <a href="/" class="view-btn" data-i18n="viewBoard">🏆 View Scoreboard</a>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label" data-i18n="navLabel">Navigation</div>
+      <div class="sidebar-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <span class="sidebar-icon">📊</span>
+        <span data-i18n="navDashboard">Dashboard</span>
+      </div>
+      <div class="sidebar-item" onclick="showPage('add-medal')" id="nav-add-medal">
+        <span class="sidebar-icon">🏅</span>
+        <span data-i18n="navAddMedal">Add Medal Entry</span>
+      </div>
+      <div class="sidebar-item" onclick="showPage('entries')" id="nav-entries">
+        <span class="sidebar-icon">📋</span>
+        <span data-i18n="navEntries">All Entries</span>
+      </div>
+      <div class="sidebar-item" onclick="showPage('competitions')" id="nav-competitions">
+        <span class="sidebar-icon">🎯</span>
+        <span data-i18n="navCompetitions">Competition Types</span>
+      </div>
+      <div class="sidebar-item" onclick="showPage('points')" id="nav-points">
+        <span class="sidebar-icon">⚙️</span>
+        <span data-i18n="navPoints">Points Settings</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-title" data-i18n="navDashboard">Dashboard</div>
+      <div class="stats-strip" id="statsStrip">
+        <div class="stat-card"><div class="stat-val" id="stat-total">—</div><div class="stat-label" data-i18n="statEntries">Total Entries</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-gold" style="color:var(--gold)">—</div><div class="stat-label" data-i18n="statGold">Gold Medals</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-silver" style="color:var(--silver)">—</div><div class="stat-label" data-i18n="statSilver">Silver Medals</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-bronze" style="color:var(--bronze)">—</div><div class="stat-label" data-i18n="statBronze">Bronze Medals</div></div>
+      </div>
+
+      <!-- Mini scoreboard -->
+      <div class="card">
+        <div class="card-title" data-i18n="overallStandings">Overall Standings</div>
+        <table class="data-table" id="dashScoreboard">
+          <thead><tr>
+            <th>#</th>
+            <th data-i18n="colTeam">Team</th>
+            <th>🥇</th><th>🥈</th><th>🥉</th>
+            <th data-i18n="colPoints">Points</th>
+          </tr></thead>
+          <tbody id="dashScoreboardBody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── ADD MEDAL ── -->
+    <div class="page" id="page-add-medal">
+      <div class="page-title" data-i18n="navAddMedal">Add Medal Entry</div>
+
+      <div class="card">
+        <div class="card-title" data-i18n="contestantInfo">Contestant Information</div>
+        <div class="form-grid" style="margin-bottom:16px">
+          <div class="form-group">
+            <label data-i18n="labelName">Contestant Name</label>
+            <input type="text" id="inp-name" data-i18n-ph="phName" placeholder="Enter contestant name"/>
+          </div>
+          <div class="form-group">
+            <label data-i18n="labelCategory">Category</label>
+            <select id="inp-category">
+              <option value="">— Select —</option>
+              <option value="P Open">P Open</option>
+              <option value="L Open">L Open</option>
+              <option value="P14">P14</option>
+              <option value="L14">L14</option>
+              <option value="L16">L16</option>
+              <option value="P20">P20</option>
+              <option value="L20">L20</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px">
+          <label data-i18n="labelCompetition">Competition Type</label>
+          <select id="inp-comp">
+            <option value="">— Select Competition —</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-i18n="selectTeam">Select Team</div>
+        <div class="team-selector" id="teamSelector">
+          <div class="team-opt" data-team="Rumah Kuning" onclick="selectTeam(this)">
+            <div class="team-dot" style="background:#f5c518"></div>
+            <span class="team-label">Rumah Kuning</span>
+          </div>
+          <div class="team-opt" data-team="Rumah Biru" onclick="selectTeam(this)">
+            <div class="team-dot" style="background:#3b82f6"></div>
+            <span class="team-label">Rumah Biru</span>
+          </div>
+          <div class="team-opt" data-team="Rumah Merah" onclick="selectTeam(this)">
+            <div class="team-dot" style="background:#ef4444"></div>
+            <span class="team-label">Rumah Merah</span>
+          </div>
+          <div class="team-opt" data-team="Rumah Hijau" onclick="selectTeam(this)">
+            <div class="team-dot" style="background:#22c55e"></div>
+            <span class="team-label">Rumah Hijau</span>
+          </div>
+        </div>
+        <input type="hidden" id="inp-team"/>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-i18n="selectMedal">Select Medal</div>
+        <div class="medal-selector">
+          <div class="medal-opt" data-medal="gold" onclick="selectMedal(this)">
+            <span class="medal-emoji">🥇</span>
+            <span class="medal-label" data-i18n="medalGold">Gold</span>
+          </div>
+          <div class="medal-opt" data-medal="silver" onclick="selectMedal(this)">
+            <span class="medal-emoji">🥈</span>
+            <span class="medal-label" data-i18n="medalSilver">Silver</span>
+          </div>
+          <div class="medal-opt" data-medal="bronze" onclick="selectMedal(this)">
+            <span class="medal-emoji">🥉</span>
+            <span class="medal-label" data-i18n="medalBronze">Bronze</span>
+          </div>
+        </div>
+        <input type="hidden" id="inp-medal"/>
+      </div>
+
+      <button class="btn btn-primary" onclick="submitMedal()" style="width:100%;justify-content:center;font-size:1rem;padding:14px">
+        <span>🏅</span> <span data-i18n="btnAddMedal">Add Medal Entry</span>
+      </button>
+    </div>
+
+    <!-- ── ALL ENTRIES ── -->
+    <div class="page" id="page-entries">
+      <div class="page-title" data-i18n="navEntries">All Entries</div>
+      <div class="card">
+        <div class="search-row">
+          <input type="text" id="searchInp" data-i18n-ph="phSearch" placeholder="Search contestant or team…" oninput="filterEntries()"/>
+          <select id="filterComp" onchange="loadEntries()">
+            <option value="">All Competitions</option>
+          </select>
+        </div>
+        <table class="data-table">
+          <thead><tr>
+            <th data-i18n="colContestant">Contestant</th>
+            <th data-i18n="colTeam">Team</th>
+            <th data-i18n="colCategory">Category</th>
+            <th data-i18n="labelCompetition">Competition</th>
+            <th data-i18n="colMedal">Medal</th>
+            <th data-i18n="colDate">Date</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="entriesBody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── COMPETITION TYPES ── -->
+    <div class="page" id="page-competitions">
+      <div class="page-title" data-i18n="navCompetitions">Competition Types</div>
+
+      <div class="card">
+        <div class="card-title" data-i18n="addNewComp">Add New Competition Type</div>
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="newCompName" style="flex:1" data-i18n-ph="phCompName" placeholder="e.g. Sukan Olahraga, Choral Speaking…"/>
+          <button class="btn btn-primary" onclick="addCompType()">
+            <span>＋</span> <span data-i18n="btnAdd">Add</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-i18n="existingComps">Existing Competition Types</div>
+        <table class="data-table">
+          <thead><tr>
+            <th data-i18n="colName">Name</th>
+            <th data-i18n="colCreated">Created</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="compTypesBody"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── POINTS SETTINGS ── -->
+    <div class="page" id="page-points">
+      <div class="page-title" data-i18n="navPoints">Points Settings</div>
+
+      <div class="card">
+        <div class="card-title" data-i18n="pointsDesc">Set how many points each medal is worth. Changes apply immediately to all standings.</div>
+
+        <!-- Live preview strip -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;">
+          <div style="background:rgba(255,215,0,.07);border:2px solid rgba(255,215,0,.3);border-radius:12px;padding:20px;text-align:center;">
+            <div style="font-size:2.2rem;margin-bottom:6px;">🥇</div>
+            <div id="preview-gold" style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--gold);line-height:1;">5</div>
+            <div style="font-size:.68rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;" data-i18n="ptsPerMedal">pts / medal</div>
+          </div>
+          <div style="background:rgba(192,192,192,.07);border:2px solid rgba(192,192,192,.25);border-radius:12px;padding:20px;text-align:center;">
+            <div style="font-size:2.2rem;margin-bottom:6px;">🥈</div>
+            <div id="preview-silver" style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--silver);line-height:1;">3</div>
+            <div style="font-size:.68rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;" data-i18n="ptsPerMedal">pts / medal</div>
+          </div>
+          <div style="background:rgba(205,127,50,.07);border:2px solid rgba(205,127,50,.25);border-radius:12px;padding:20px;text-align:center;">
+            <div style="font-size:2.2rem;margin-bottom:6px;">🥉</div>
+            <div id="preview-bronze" style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--bronze);line-height:1;">1</div>
+            <div style="font-size:.68rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;" data-i18n="ptsPerMedal">pts / medal</div>
+          </div>
+        </div>
+
+        <!-- Input row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px;">
+          <div class="form-group">
+            <label style="color:var(--gold);" data-i18n="labelGoldPts">🥇 Gold Points</label>
+            <input type="number" id="pts-gold" min="0" max="999" value="5"
+              oninput="document.getElementById('preview-gold').textContent=this.value||0"
+              style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--gold);text-align:center;border-color:rgba(255,215,0,.3);"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--silver);" data-i18n="labelSilverPts">🥈 Silver Points</label>
+            <input type="number" id="pts-silver" min="0" max="999" value="3"
+              oninput="document.getElementById('preview-silver').textContent=this.value||0"
+              style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--silver);text-align:center;border-color:rgba(192,192,192,.25);"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--bronze);" data-i18n="labelBronzePts">🥉 Bronze Points</label>
+            <input type="number" id="pts-bronze" min="0" max="999" value="1"
+              oninput="document.getElementById('preview-bronze').textContent=this.value||0"
+              style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--bronze);text-align:center;border-color:rgba(205,127,50,.25);"/>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="savePoints()" style="width:100%;justify-content:center;font-size:1rem;padding:14px;">
+          <span>💾</span> <span data-i18n="btnSavePoints">Save Points Values</span>
+        </button>
+      </div>
+
+      <!-- Info box -->
+      <div class="card" style="border-color:rgba(245,197,24,.15);background:rgba(245,197,24,.04);">
+        <div class="card-title" data-i18n="pointsInfoTitle">How Points Work</div>
+        <p style="font-size:.88rem;color:var(--muted);line-height:1.7;" data-i18n="pointsInfo">
+          Every medal entry is worth the points you set here. The scoreboard totals up all medals per team and ranks them by total points. If two teams are tied on points, the team with more Gold medals ranks higher; if still tied, more Silver medals wins.
+        </p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  Made by <span class="brand">Jayden Tan Zheng Yu</span> · 2A · <a href="mailto:jtyztan12@gmail.com">jtyztan12@gmail.com</a><br>
+  IPGC Software · <a href="https://ipgc-website.onrender.com" target="_blank">ipgc-website.onrender.com</a>
+</footer>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── i18n ────────────────────────────────────────────────────────────
+const STRINGS = {
+  en: {
+    adminTitle: 'ADMIN PANEL', viewBoard: '🏆 View Scoreboard',
+    navLabel: 'Navigation', navDashboard: 'Dashboard',
+    navAddMedal: 'Add Medal Entry', navEntries: 'All Entries',
+    navCompetitions: 'Competition Types',
+    statEntries: 'Total Entries', statGold: 'Gold Medals',
+    statSilver: 'Silver Medals', statBronze: 'Bronze Medals',
+    overallStandings: 'Overall Standings',
+    colTeam: 'Team', colPoints: 'Points', colContestant: 'Contestant',
+    colCategory: 'Category', colMedal: 'Medal', colDate: 'Date', colName: 'Name', colCreated: 'Created',
+    contestantInfo: 'Contestant Information', labelName: 'Contestant Name',
+    labelCategory: 'Category', labelCompetition: 'Competition Type',
+    selectTeam: 'Select Team', selectMedal: 'Select Medal',
+    medalGold: 'Gold', medalSilver: 'Silver', medalBronze: 'Bronze',
+    btnAddMedal: 'Add Medal Entry', addNewComp: 'Add New Competition Type',
+    existingComps: 'Existing Competition Types', btnAdd: 'Add',
+    phName: 'Enter contestant name', phSearch: 'Search contestant or team…',
+    phCompName: 'e.g. Sukan Olahraga, Choral Speaking…',
+    toastAdded: '✅ Medal entry added!', toastDeleted: '🗑️ Deleted.',
+    toastCompAdded: '✅ Competition type added!', toastError: '❌ Error. Try again.',
+    toastFill: '⚠️ Please fill all fields.',
+    confirmDelete: 'Delete this entry?', confirmDeleteComp: 'Delete this competition type?',
+    navPoints: 'Points Settings',
+    pointsDesc: 'Set how many points each medal is worth. Changes apply immediately to all standings.',
+    ptsPerMedal: 'pts / medal',
+    labelGoldPts: '🥇 Gold Points', labelSilverPts: '🥈 Silver Points', labelBronzePts: '🥉 Bronze Points',
+    btnSavePoints: 'Save Points Values',
+    pointsInfoTitle: 'How Points Work',
+    pointsInfo: 'Every medal entry is worth the points you set here. The scoreboard totals up all medals per team and ranks them by total points. If two teams are tied on points, the team with more Gold medals ranks higher; if still tied, more Silver medals wins.',
+    toastPointsSaved: '✅ Points values saved!',
+  },
+  ms: {
+    adminTitle: 'PANEL ADMIN', viewBoard: '🏆 Lihat Papan Skor',
+    navLabel: 'Navigasi', navDashboard: 'Papan Pemuka',
+    navAddMedal: 'Tambah Rekod Medal', navEntries: 'Semua Rekod',
+    navCompetitions: 'Jenis Pertandingan',
+    statEntries: 'Jumlah Rekod', statGold: 'Medal Emas',
+    statSilver: 'Medal Perak', statBronze: 'Medal Gangsa',
+    overallStandings: 'Kedudukan Keseluruhan',
+    colTeam: 'Pasukan', colPoints: 'Mata', colContestant: 'Peserta',
+    colCategory: 'Kategori', colMedal: 'Medal', colDate: 'Tarikh', colName: 'Nama', colCreated: 'Dicipta',
+    contestantInfo: 'Maklumat Peserta', labelName: 'Nama Peserta',
+    labelCategory: 'Kategori', labelCompetition: 'Jenis Pertandingan',
+    selectTeam: 'Pilih Pasukan', selectMedal: 'Pilih Medal',
+    medalGold: 'Emas', medalSilver: 'Perak', medalBronze: 'Gangsa',
+    btnAddMedal: 'Tambah Rekod Medal', addNewComp: 'Tambah Jenis Pertandingan Baru',
+    existingComps: 'Jenis Pertandingan Sedia Ada', btnAdd: 'Tambah',
+    phName: 'Masukkan nama peserta', phSearch: 'Cari peserta atau pasukan…',
+    phCompName: 'cth. Sukan Olahraga, Choral Speaking…',
+    toastAdded: '✅ Rekod medal ditambah!', toastDeleted: '🗑️ Dipadam.',
+    toastCompAdded: '✅ Jenis pertandingan ditambah!', toastError: '❌ Ralat. Cuba lagi.',
+    toastFill: '⚠️ Sila isi semua medan.',
+    confirmDelete: 'Padam rekod ini?', confirmDeleteComp: 'Padam jenis pertandingan ini?',
+    navPoints: 'Tetapan Mata',
+    pointsDesc: 'Tetapkan berapa mata setiap medal bernilai. Perubahan berkuat kuasa serta-merta.',
+    ptsPerMedal: 'mata / medal',
+    labelGoldPts: '🥇 Mata Emas', labelSilverPts: '🥈 Mata Perak', labelBronzePts: '🥉 Mata Gangsa',
+    btnSavePoints: 'Simpan Nilai Mata',
+    pointsInfoTitle: 'Cara Mata Dikira',
+    pointsInfo: 'Setiap rekod medal bernilai mata yang anda tetapkan di sini. Papan skor menjumlahkan semua medal setiap pasukan dan menyusun mengikut jumlah mata. Jika dua pasukan seri, pasukan dengan lebih banyak medal Emas menang; jika masih seri, medal Perak yang lebih banyak menentukan.',
+    toastPointsSaved: '✅ Nilai mata disimpan!',
+  }
+};
+let lang = 'en';
+function setLang(l) {
+  lang = l;
+  document.getElementById('lang-en').classList.toggle('active', l === 'en');
+  document.getElementById('lang-ms').classList.toggle('active', l === 'ms');
+  const S = STRINGS[l];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.dataset.i18n;
+    if (S[k]) el.textContent = S[k];
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const k = el.dataset.i18nPh;
+    if (S[k]) el.placeholder = S[k];
+  });
+}
+function t(k) { return STRINGS[lang][k] || k; }
+
+// ─── Navigation ──────────────────────────────────────────────────────
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+  if (page === 'dashboard') loadDashboard();
+  if (page === 'entries') loadEntries();
+  if (page === 'competitions') loadCompTypes();
+  if (page === 'add-medal') populateCompSelect('inp-comp');
+  if (page === 'points') loadPoints();
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────
+function showToast(msg, isError=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (isError ? ' error' : '') + ' show';
+  setTimeout(() => el.className = 'toast', 2800);
+}
+
+// ─── Medal / Team selection ──────────────────────────────────────────
+function selectMedal(el) {
+  document.querySelectorAll('.medal-opt').forEach(o => o.className = 'medal-opt');
+  const m = el.dataset.medal;
+  el.classList.add(`selected-${m}`);
+  document.getElementById('inp-medal').value = m;
+}
+function selectTeam(el) {
+  document.querySelectorAll('.team-opt').forEach(o => {
+    o.classList.remove('selected');
+    o.style.borderColor = '';
+    o.style.background = '';
+  });
+  el.classList.add('selected');
+  const colors = {'Rumah Kuning':'#f5c518','Rumah Biru':'#3b82f6','Rumah Merah':'#ef4444','Rumah Hijau':'#22c55e'};
+  const c = colors[el.dataset.team];
+  el.style.borderColor = c;
+  el.style.background = c + '18';
+  document.getElementById('inp-team').value = el.dataset.team;
+}
+
+// ─── Populate competition selects ────────────────────────────────────
+async function populateCompSelect(selectId) {
+  const res = await fetch('/api/competition-types');
+  const types = await res.json();
+  const sel = document.getElementById(selectId);
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">— ${selectId === 'filterComp' ? 'All' : 'Select'} —</option>`;
+  types.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t.name; o.textContent = t.name;
+    if (t.name === cur) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+// ─── Submit medal ────────────────────────────────────────────────────
+async function submitMedal() {
+  const name = document.getElementById('inp-name').value.trim();
+  const category = document.getElementById('inp-category').value;
+  const comp = document.getElementById('inp-comp').value;
+  const team = document.getElementById('inp-team').value;
+  const medal = document.getElementById('inp-medal').value;
+  if (!name || !category || !comp || !team || !medal) { showToast(t('toastFill'), true); return; }
+  try {
+    const res = await fetch('/api/medals', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contestant:name, category, competitionType:comp, team, medalType:medal })
+    });
+    if (!res.ok) throw new Error();
+    showToast(t('toastAdded'));
+    // Reset
+    document.getElementById('inp-name').value = '';
+    document.getElementById('inp-category').value = '';
+    document.getElementById('inp-comp').value = '';
+    document.getElementById('inp-team').value = '';
+    document.getElementById('inp-medal').value = '';
+    document.querySelectorAll('.medal-opt').forEach(o => o.className = 'medal-opt');
+    document.querySelectorAll('.team-opt').forEach(o => { o.classList.remove('selected'); o.style.borderColor=''; o.style.background=''; });
+  } catch { showToast(t('toastError'), true); }
+}
+
+// ─── Dashboard ───────────────────────────────────────────────────────
+async function loadDashboard() {
+  const [medals, board] = await Promise.all([
+    fetch('/api/medals').then(r=>r.json()),
+    fetch('/api/scoreboard').then(r=>r.json())
+  ]);
+  document.getElementById('stat-total').textContent = medals.length;
+  document.getElementById('stat-gold').textContent = medals.filter(m=>m.medalType==='gold').length;
+  document.getElementById('stat-silver').textContent = medals.filter(m=>m.medalType==='silver').length;
+  document.getElementById('stat-bronze').textContent = medals.filter(m=>m.medalType==='bronze').length;
+
+  const TEAM_PILL = {'Rumah Kuning':'kuning','Rumah Biru':'biru','Rumah Merah':'merah','Rumah Hijau':'hijau'};
+  const tbody = document.getElementById('dashScoreboardBody');
+  tbody.innerHTML = board.map((r,i) => `
+    <tr>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:${i===0?'var(--gold)':i===1?'var(--silver)':i===2?'var(--bronze)':'var(--muted)'}">${i+1}</td>
+      <td><span class="team-pill pill-${TEAM_PILL[r.team]}">${r.team}</span></td>
+      <td>${r.gold}</td><td>${r.silver}</td><td>${r.bronze}</td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--accent)">${r.points}</td>
+    </tr>`).join('');
+}
+
+// ─── All Entries ─────────────────────────────────────────────────────
+let allEntries = [];
+async function loadEntries() {
+  await populateCompSelect('filterComp');
+  const comp = document.getElementById('filterComp').value;
+  const url = comp ? `/api/medals?competitionType=${encodeURIComponent(comp)}` : '/api/medals';
+  allEntries = await fetch(url).then(r=>r.json());
+  renderEntries(allEntries);
+}
+function filterEntries() {
+  const q = document.getElementById('searchInp').value.toLowerCase();
+  const filtered = allEntries.filter(e =>
+    e.contestant.toLowerCase().includes(q) || e.team.toLowerCase().includes(q)
+  );
+  renderEntries(filtered);
+}
+function renderEntries(entries) {
+  const TEAM_PILL = {'Rumah Kuning':'kuning','Rumah Biru':'biru','Rumah Merah':'merah','Rumah Hijau':'hijau'};
+  const tbody = document.getElementById('entriesBody');
+  if (!entries.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No entries found.</td></tr>'; return; }
+  tbody.innerHTML = entries.map(e => `
+    <tr>
+      <td>${e.contestant}</td>
+      <td><span class="team-pill pill-${TEAM_PILL[e.team]}">${e.team}</span></td>
+      <td>${e.category}</td>
+      <td>${e.competitionType}</td>
+      <td><span class="badge badge-${e.medalType}">${e.medalType === 'gold' ? '🥇 Gold' : e.medalType === 'silver' ? '🥈 Silver' : '🥉 Bronze'}</span></td>
+      <td style="color:var(--muted);font-size:.8rem">${new Date(e.createdAt).toLocaleDateString()}</td>
+      <td><button class="btn btn-danger" style="padding:5px 12px;font-size:.75rem" onclick="deleteEntry('${e._id}')">✕</button></td>
+    </tr>`).join('');
+}
+async function deleteEntry(id) {
+  if (!confirm(t('confirmDelete'))) return;
+  await fetch(`/api/medals/${id}`, {method:'DELETE'});
+  showToast(t('toastDeleted'));
+  loadEntries();
+}
+
+// ─── Competition Types ────────────────────────────────────────────────
+async function loadCompTypes() {
+  const types = await fetch('/api/competition-types').then(r=>r.json());
+  const tbody = document.getElementById('compTypesBody');
+  if (!types.length) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:30px">No competition types yet.</td></tr>'; return; }
+  tbody.innerHTML = types.map(ct => `
+    <tr>
+      <td style="font-weight:600">${ct.name}</td>
+      <td style="color:var(--muted);font-size:.8rem">${new Date(ct.createdAt).toLocaleDateString()}</td>
+      <td><button class="btn btn-danger" style="padding:5px 12px;font-size:.75rem" onclick="deleteCompType('${ct._id}','${ct.name}')">✕</button></td>
+    </tr>`).join('');
+}
+async function addCompType() {
+  const name = document.getElementById('newCompName').value.trim();
+  if (!name) return;
+  try {
+    const res = await fetch('/api/competition-types', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name})
+    });
+    if (!res.ok) throw new Error();
+    document.getElementById('newCompName').value = '';
+    showToast(t('toastCompAdded'));
+    loadCompTypes();
+  } catch { showToast(t('toastError'), true); }
+}
+async function deleteCompType(id, name) {
+  if (!confirm(t('confirmDeleteComp') + ` "${name}"`)) return;
+  await fetch(`/api/competition-types/${id}`, {method:'DELETE'});
+  showToast(t('toastDeleted'));
+  loadCompTypes();
+}
+
+// ─── Points Settings ─────────────────────────────────────────────────
+async function loadPoints() {
+  try {
+    const pts = await fetch('/api/settings').then(r => r.json());
+    document.getElementById('pts-gold').value   = pts.gold;
+    document.getElementById('pts-silver').value = pts.silver;
+    document.getElementById('pts-bronze').value = pts.bronze;
+    document.getElementById('preview-gold').textContent   = pts.gold;
+    document.getElementById('preview-silver').textContent = pts.silver;
+    document.getElementById('preview-bronze').textContent = pts.bronze;
+  } catch { showToast(t('toastError'), true); }
+}
+async function savePoints() {
+  const gold   = Number(document.getElementById('pts-gold').value);
+  const silver = Number(document.getElementById('pts-silver').value);
+  const bronze = Number(document.getElementById('pts-bronze').value);
+  if ([gold, silver, bronze].some(v => isNaN(v) || v < 0)) {
+    showToast(t('toastFill'), true); return;
+  }
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ gold, silver, bronze })
+    });
+    if (!res.ok) throw new Error();
+    showToast(t('toastPointsSaved'));
+  } catch { showToast(t('toastError'), true); }
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────
+loadDashboard();
+</script>
+</body>
+</html>
