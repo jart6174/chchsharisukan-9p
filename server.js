@@ -11,7 +11,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── MongoDB Connection ────────────────────────────────────────────────
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/scoreboard';
-mongoose.connect(MONGO_URI).then(() => console.log('✅ MongoDB connected')).catch(err => console.error('❌ MongoDB error:', err));
+console.log('[v0] MONGO_URI from env present:', !!process.env.MONGO_URI);
+console.log('[v0] Connecting to:', MONGO_URI.replace(/:\/\/[^@]*@/, '://***:***@'));
+mongoose.connect(MONGO_URI).then(() => console.log('✅ MongoDB connected')).catch(err => console.error('❌ MongoDB error:', err.message));
 
 // ─── Schemas ───────────────────────────────────────────────────────────
 const competitionTypeSchema = new mongoose.Schema({
