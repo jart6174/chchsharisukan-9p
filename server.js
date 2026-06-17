@@ -166,9 +166,15 @@ app.use((err, req, res, next) => {
 });
 
 // ─── Start ─────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+// Locally we listen on a port. On Vercel the app is used as a serverless
+// handler via the export below, so we only call listen outside of Vercel.
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+}
 
 // Last-resort guards so an unexpected error never takes the whole site down.
 process.on('unhandledRejection', err => console.error('Unhandled rejection:', err?.message || err));
 process.on('uncaughtException', err => console.error('Uncaught exception:', err?.message || err));
+
+module.exports = app;
