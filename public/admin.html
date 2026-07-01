@@ -195,6 +195,7 @@
   }
   .btn-primary { background:var(--accent); color:#000; }
   .btn-primary:hover { background:#e6b800; transform:translateY(-1px); }
+  .btn-primary:disabled { opacity:.4; cursor:not-allowed; transform:none; }
   .btn-danger { background:var(--danger); color:#fff; }
   .btn-danger:hover { background:#dc2626; }
   .btn-ghost {
@@ -263,6 +264,20 @@
   .search-row { display:flex; gap:10px; margin-bottom:16px; }
   .search-row input { flex:1; }
 
+  /* ── Upload zone ── */
+  .upload-zone {
+    border:2px dashed var(--border); border-radius:12px;
+    padding:32px; text-align:center; cursor:pointer;
+    transition: border-color .2s; background:var(--surface2);
+  }
+  .upload-zone:hover, .upload-zone.drag-over { border-color:var(--accent); }
+  .spinner {
+    border:2px solid var(--border); border-top-color:var(--accent);
+    border-radius:50%; width:16px; height:16px;
+    animation: spin .6s linear infinite; display:inline-block;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
   /* ── Responsive ── */
   @media(max-width:768px){
     .layout { grid-template-columns:1fr; }
@@ -319,6 +334,10 @@
         <span class="sidebar-icon">📋</span>
         <span data-i18n="navEntries">All Entries</span>
       </div>
+      <div class="sidebar-item" onclick="showPage('athletes')" id="nav-athletes">
+        <span class="sidebar-icon">🧑‍🤝‍🧑</span>
+        <span data-i18n="navAthletes">Athletes</span>
+      </div>
       <div class="sidebar-item" onclick="showPage('competitions')" id="nav-competitions">
         <span class="sidebar-icon">🎯</span>
         <span data-i18n="navCompetitions">Competition Types</span>
@@ -366,8 +385,10 @@
         <div class="card-title" data-i18n="contestantInfo">Contestant Information</div>
         <div class="form-grid" style="margin-bottom:16px">
           <div class="form-group">
-            <label data-i18n="labelName">Contestant Name</label>
-            <input type="text" id="inp-name" data-i18n-ph="phName" placeholder="Enter contestant name"/>
+            <label data-i18n="labelAthlete">Athlete</label>
+            <select id="inp-athlete" onchange="onAthleteSelected()">
+              <option value="" data-i18n="phSelectAthlete">— Select athlete from roster —</option>
+            </select>
           </div>
           <div class="form-group">
             <label data-i18n="labelCategory">Category</label>
@@ -380,11 +401,17 @@
               <option value="L16">L16</option>
               <option value="P20">P20</option>
               <option value="L20">L20</option>
+              <option value="Jemputan">Jemputan</option>
             </select>
           </div>
         </div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:0;" data-i18n="athleteHint">No athlete in the roster? Add them under the "Athletes" tab first, or type a one-off name below.</p>
+        <div class="form-group" style="margin-top:10px;">
+          <label data-i18n="labelManualName">Manual Name (only if not in roster)</label>
+          <input type="text" id="inp-name-manual" data-i18n-ph="phName" placeholder="Enter contestant name"/>
+        </div>
 
-        <div class="form-group" style="margin-bottom:16px">
+        <div class="form-group" style="margin-top:16px">
           <label data-i18n="labelCompetition">Competition Type</label>
           <select id="inp-comp">
             <option value="">— Select Competition —</option>
@@ -460,6 +487,104 @@
             <th></th>
           </tr></thead>
           <tbody id="entriesBody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── ATHLETES ── -->
+    <div class="page" id="page-athletes">
+      <div class="page-title" data-i18n="navAthletes">Athletes</div>
+
+      <div class="form-grid" style="align-items:start;">
+        <!-- Add athlete -->
+        <div class="card">
+          <div class="card-title" data-i18n="addAthlete">Add Athlete</div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label data-i18n="labelName">Full Name</label>
+            <input type="text" id="ath-name"/>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label data-i18n="labelNumber">Number</label>
+            <input type="text" id="ath-number"/>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label data-i18n="labelCategory">Category</label>
+            <select id="ath-category">
+              <option value="">— Select —</option>
+              <option>P Open</option><option>L Open</option>
+              <option>P14</option><option>L14</option><option>L16</option>
+              <option>P20</option><option>L20</option><option>Jemputan</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:16px;">
+            <label data-i18n="labelTeam">Team</label>
+            <select id="ath-team">
+              <option value="">— Select —</option>
+              <option>Rumah Kuning</option><option>Rumah Biru</option>
+              <option>Rumah Merah</option><option>Rumah Hijau</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="addAthlete()" style="width:100%;justify-content:center;">
+            <span>＋</span> <span data-i18n="btnAddAthlete">Add Athlete</span>
+          </button>
+        </div>
+
+        <!-- Import / Export -->
+        <div class="card">
+          <div class="card-title" data-i18n="importExport">Import / Export</div>
+          <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px;line-height:1.6;" data-i18n="importDesc">Upload a school-format Word document (e.g. RUMAH_KUNING_ATLET.docx) or a flat table with Name/Number/Category/Team columns. Team and categories are detected automatically.</p>
+
+          <div class="upload-zone" id="uploadZone" onclick="document.getElementById('docxFile').click()">
+            <div style="font-size:2rem;margin-bottom:8px;">📄</div>
+            <p style="font-size:.88rem;font-weight:600;" data-i18n="uploadPrompt">Click or drag &amp; drop a .docx file</p>
+            <p style="font-size:.72rem;color:var(--muted);margin-top:4px;" data-i18n="uploadHint">Max 10MB · .docx format only</p>
+            <input type="file" id="docxFile" accept=".docx,.doc" style="display:none;" onchange="handleFileSelect(this.files[0])"/>
+          </div>
+
+          <div id="fileInfo" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-top:12px;display:flex;align-items:center;justify-content:space-between;font-size:.85rem;">
+            <span id="fileName">—</span>
+            <button class="btn-ghost" style="border:none;color:var(--danger);cursor:pointer;background:none;font-size:.8rem;" onclick="clearFile()">✕</button>
+          </div>
+
+          <button class="btn btn-primary" id="importBtn" onclick="importDocx()" disabled style="width:100%;justify-content:center;margin-top:12px;">
+            <span data-i18n="btnImport">Import Athletes</span>
+          </button>
+
+          <div id="importResultBox" style="display:none;margin-top:14px;padding:12px;border-radius:8px;font-size:.82rem;"></div>
+
+          <hr class="divider"/>
+
+          <button class="btn btn-success" id="exportBtn" onclick="exportResults()" style="width:100%;justify-content:center;">
+            <span>📤</span> <span data-i18n="btnExport">Export Results (.docx)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Roster table -->
+      <div class="card">
+        <div class="search-row">
+          <div class="card-title" style="margin-bottom:0;" data-i18n="rosterTitle">Athlete Roster</div>
+          <select id="ath-filterTeam" onchange="loadAthletes()" style="max-width:180px;">
+            <option value="" data-i18n="allTeams">All Teams</option>
+            <option>Rumah Kuning</option><option>Rumah Biru</option>
+            <option>Rumah Merah</option><option>Rumah Hijau</option>
+          </select>
+          <select id="ath-filterCat" onchange="loadAthletes()" style="max-width:180px;">
+            <option value="" data-i18n="allCategories">All Categories</option>
+            <option>P Open</option><option>L Open</option>
+            <option>P14</option><option>L14</option><option>L16</option>
+            <option>P20</option><option>L20</option><option>Jemputan</option>
+          </select>
+        </div>
+        <table class="data-table">
+          <thead><tr>
+            <th data-i18n="colName">Name</th>
+            <th data-i18n="colNumber">No.</th>
+            <th data-i18n="colCategory">Category</th>
+            <th data-i18n="colTeam">Team</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="athletesBody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -571,13 +696,19 @@ const STRINGS = {
     adminTitle: 'ADMIN PANEL', viewBoard: '🏆 View Scoreboard',
     navLabel: 'Navigation', navDashboard: 'Dashboard',
     navAddMedal: 'Add Medal Entry', navEntries: 'All Entries',
+    navAthletes: 'Athletes',
     navCompetitions: 'Competition Types',
     statEntries: 'Total Entries', statGold: 'Gold Medals',
     statSilver: 'Silver Medals', statBronze: 'Bronze Medals',
     overallStandings: 'Overall Standings',
     colTeam: 'Team', colPoints: 'Points', colContestant: 'Contestant',
     colCategory: 'Category', colMedal: 'Medal', colDate: 'Date', colName: 'Name', colCreated: 'Created',
+    colNumber: 'No.',
     contestantInfo: 'Contestant Information', labelName: 'Contestant Name',
+    labelAthlete: 'Athlete', phSelectAthlete: '— Select athlete from roster —',
+    athleteHint: 'No athlete in the roster? Add them under the "Athletes" tab first, or type a one-off name below.',
+    labelManualName: 'Manual Name (only if not in roster)',
+    labelNumber: 'Number', labelTeam: 'Team',
     labelCategory: 'Category', labelCompetition: 'Competition Type',
     selectTeam: 'Select Team', selectMedal: 'Select Medal',
     medalGold: 'Gold', medalSilver: 'Silver', medalBronze: 'Bronze',
@@ -589,6 +720,7 @@ const STRINGS = {
     toastCompAdded: '✅ Competition type added!', toastError: '❌ Error. Try again.',
     toastFill: '⚠️ Please fill all fields.',
     confirmDelete: 'Delete this entry?', confirmDeleteComp: 'Delete this competition type?',
+    confirmDeleteAthlete: 'Delete this athlete?',
     navPoints: 'Points Settings',
     pointsDesc: 'Set how many points each medal is worth. Changes apply immediately to all standings.',
     ptsPerMedal: 'pts / medal',
@@ -597,18 +729,33 @@ const STRINGS = {
     pointsInfoTitle: 'How Points Work',
     pointsInfo: 'Every medal entry is worth the points you set here. The scoreboard totals up all medals per team and ranks them by total points. If two teams are tied on points, the team with more Gold medals ranks higher; if still tied, more Silver medals wins.',
     toastPointsSaved: '✅ Points values saved!',
+    addAthlete: 'Add Athlete', btnAddAthlete: 'Add Athlete',
+    importExport: 'Import / Export',
+    importDesc: 'Upload a school-format Word document (e.g. RUMAH_KUNING_ATLET.docx) or a flat table with Name/Number/Category/Team columns. Team and categories are detected automatically.',
+    uploadPrompt: 'Click or drag & drop a .docx file', uploadHint: 'Max 10MB · .docx format only',
+    btnImport: 'Import Athletes', btnExport: 'Export Results (.docx)',
+    rosterTitle: 'Athlete Roster', allTeams: 'All Teams', allCategories: 'All Categories',
+    toastAthleteAdded: '✅ Athlete added!', toastAthleteDeleted: '🗑️ Athlete deleted.',
+    toastImporting: 'Importing…', toastExporting: 'Exporting…',
+    toastExported: '✅ Export complete!',
   },
   ms: {
     adminTitle: 'PANEL ADMIN', viewBoard: '🏆 Lihat Papan Skor',
     navLabel: 'Navigasi', navDashboard: 'Papan Pemuka',
     navAddMedal: 'Tambah Rekod Medal', navEntries: 'Semua Rekod',
+    navAthletes: 'Atlet',
     navCompetitions: 'Jenis Pertandingan',
     statEntries: 'Jumlah Rekod', statGold: 'Medal Emas',
     statSilver: 'Medal Perak', statBronze: 'Medal Gangsa',
     overallStandings: 'Kedudukan Keseluruhan',
     colTeam: 'Pasukan', colPoints: 'Mata', colContestant: 'Peserta',
     colCategory: 'Kategori', colMedal: 'Medal', colDate: 'Tarikh', colName: 'Nama', colCreated: 'Dicipta',
+    colNumber: 'No.',
     contestantInfo: 'Maklumat Peserta', labelName: 'Nama Peserta',
+    labelAthlete: 'Atlet', phSelectAthlete: '— Pilih atlet dari senarai —',
+    athleteHint: 'Atlet tiada dalam senarai? Tambah di tab "Atlet" dahulu, atau taip nama sekali sahaja di bawah.',
+    labelManualName: 'Nama Manual (jika tiada dalam senarai)',
+    labelNumber: 'Nombor', labelTeam: 'Pasukan',
     labelCategory: 'Kategori', labelCompetition: 'Jenis Pertandingan',
     selectTeam: 'Pilih Pasukan', selectMedal: 'Pilih Medal',
     medalGold: 'Emas', medalSilver: 'Perak', medalBronze: 'Gangsa',
@@ -620,6 +767,7 @@ const STRINGS = {
     toastCompAdded: '✅ Jenis pertandingan ditambah!', toastError: '❌ Ralat. Cuba lagi.',
     toastFill: '⚠️ Sila isi semua medan.',
     confirmDelete: 'Padam rekod ini?', confirmDeleteComp: 'Padam jenis pertandingan ini?',
+    confirmDeleteAthlete: 'Padam atlet ini?',
     navPoints: 'Tetapan Mata',
     pointsDesc: 'Tetapkan berapa mata setiap medal bernilai. Perubahan berkuat kuasa serta-merta.',
     ptsPerMedal: 'mata / medal',
@@ -628,6 +776,15 @@ const STRINGS = {
     pointsInfoTitle: 'Cara Mata Dikira',
     pointsInfo: 'Setiap rekod medal bernilai mata yang anda tetapkan di sini. Papan skor menjumlahkan semua medal setiap pasukan dan menyusun mengikut jumlah mata. Jika dua pasukan seri, pasukan dengan lebih banyak medal Emas menang; jika masih seri, medal Perak yang lebih banyak menentukan.',
     toastPointsSaved: '✅ Nilai mata disimpan!',
+    addAthlete: 'Tambah Atlet', btnAddAthlete: 'Tambah Atlet',
+    importExport: 'Import / Eksport',
+    importDesc: 'Muat naik dokumen Word berformat sekolah (cth. RUMAH_KUNING_ATLET.docx) atau jadual rata dengan lajur Nama/Nombor/Kategori/Pasukan. Pasukan dan kategori dikesan secara automatik.',
+    uploadPrompt: 'Klik atau seret & lepas fail .docx', uploadHint: 'Maks 10MB · Format .docx sahaja',
+    btnImport: 'Import Atlet', btnExport: 'Eksport Keputusan (.docx)',
+    rosterTitle: 'Senarai Atlet', allTeams: 'Semua Pasukan', allCategories: 'Semua Kategori',
+    toastAthleteAdded: '✅ Atlet ditambah!', toastAthleteDeleted: '🗑️ Atlet dipadam.',
+    toastImporting: 'Mengimport…', toastExporting: 'Mengeksport…',
+    toastExported: '✅ Eksport selesai!',
   }
 };
 let lang = 'en';
@@ -655,8 +812,9 @@ function showPage(page) {
   document.getElementById('nav-' + page).classList.add('active');
   if (page === 'dashboard') loadDashboard();
   if (page === 'entries') loadEntries();
+  if (page === 'athletes') loadAthletes();
   if (page === 'competitions') loadCompTypes();
-  if (page === 'add-medal') populateCompSelect('inp-comp');
+  if (page === 'add-medal') { populateCompSelect('inp-comp'); populateAthleteSelect(); }
   if (page === 'points') loadPoints();
 }
 
@@ -696,31 +854,61 @@ async function populateCompSelect(selectId) {
   const sel = document.getElementById(selectId);
   const cur = sel.value;
   sel.innerHTML = `<option value="">— ${selectId === 'filterComp' ? 'All' : 'Select'} —</option>`;
-  types.forEach(t => {
+  types.forEach(ty => {
     const o = document.createElement('option');
-    o.value = t.name; o.textContent = t.name;
-    if (t.name === cur) o.selected = true;
+    o.value = ty.name; o.textContent = ty.name;
+    if (ty.name === cur) o.selected = true;
     sel.appendChild(o);
   });
 }
 
+// ─── Athlete dropdown on Add Medal page ──────────────────────────────
+let rosterCache = [];
+async function populateAthleteSelect() {
+  rosterCache = await fetch('/api/athletes').then(r => r.json());
+  const sel = document.getElementById('inp-athlete');
+  sel.innerHTML = `<option value="">${t('phSelectAthlete')}</option>`;
+  rosterCache.forEach(a => {
+    const o = document.createElement('option');
+    o.value = a._id;
+    o.textContent = `${a.name}${a.number ? ' (#' + a.number + ')' : ''} — ${a.category} — ${a.team}`;
+    sel.appendChild(o);
+  });
+}
+function onAthleteSelected() {
+  const id = document.getElementById('inp-athlete').value;
+  if (!id) return;
+  const a = rosterCache.find(x => x._id === id);
+  if (!a) return;
+  document.getElementById('inp-category').value = a.category;
+  document.getElementById('inp-name-manual').value = '';
+  const teamOpt = document.querySelector(`.team-opt[data-team="${a.team}"]`);
+  if (teamOpt) selectTeam(teamOpt);
+}
+
 // ─── Submit medal ────────────────────────────────────────────────────
 async function submitMedal() {
-  const name = document.getElementById('inp-name').value.trim();
+  const athleteId = document.getElementById('inp-athlete').value;
+  const manualName = document.getElementById('inp-name-manual').value.trim();
+  const athlete = rosterCache.find(x => x._id === athleteId);
+  const name = athlete ? athlete.name : manualName;
+
   const category = document.getElementById('inp-category').value;
   const comp = document.getElementById('inp-comp').value;
   const team = document.getElementById('inp-team').value;
   const medal = document.getElementById('inp-medal').value;
   if (!name || !category || !comp || !team || !medal) { showToast(t('toastFill'), true); return; }
   try {
+    const payload = { contestant:name, category, competitionType:comp, team, medalType:medal };
+    if (athleteId) payload.athlete = athleteId;
     const res = await fetch('/api/medals', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ contestant:name, category, competitionType:comp, team, medalType:medal })
+      body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error();
     showToast(t('toastAdded'));
-    // Reset
-    document.getElementById('inp-name').value = '';
+    document.getElementById('inp-athlete').value = '';
+    document.getElementById('inp-name-manual').value = '';
     document.getElementById('inp-category').value = '';
     document.getElementById('inp-comp').value = '';
     document.getElementById('inp-team').value = '';
@@ -788,6 +976,134 @@ async function deleteEntry(id) {
   await fetch(`/api/medals/${id}`, {method:'DELETE'});
   showToast(t('toastDeleted'));
   loadEntries();
+}
+
+// ─── Athletes ──────────────────────────────────────────────────────────
+async function loadAthletes() {
+  const team = document.getElementById('ath-filterTeam').value;
+  const category = document.getElementById('ath-filterCat').value;
+  const params = new URLSearchParams();
+  if (team) params.set('team', team);
+  if (category) params.set('category', category);
+  const athletes = await fetch(`/api/athletes?${params}`).then(r => r.json());
+
+  const TEAM_PILL = {'Rumah Kuning':'kuning','Rumah Biru':'biru','Rumah Merah':'merah','Rumah Hijau':'hijau'};
+  const tbody = document.getElementById('athletesBody');
+  if (!athletes.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">No athletes found.</td></tr>'; return; }
+  tbody.innerHTML = athletes.map(a => `
+    <tr>
+      <td style="font-weight:600">${a.name}</td>
+      <td style="color:var(--muted)">${a.number || '—'}</td>
+      <td>${a.category}</td>
+      <td><span class="team-pill pill-${TEAM_PILL[a.team]}">${a.team}</span></td>
+      <td><button class="btn btn-danger" style="padding:5px 12px;font-size:.75rem" onclick="deleteAthlete('${a._id}')">✕</button></td>
+    </tr>`).join('');
+}
+
+async function addAthlete() {
+  const name = document.getElementById('ath-name').value.trim();
+  const number = document.getElementById('ath-number').value.trim();
+  const category = document.getElementById('ath-category').value;
+  const team = document.getElementById('ath-team').value;
+  if (!name || !category || !team) { showToast(t('toastFill'), true); return; }
+  try {
+    const res = await fetch('/api/athletes', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, number, category, team })
+    });
+    if (!res.ok) throw new Error();
+    showToast(t('toastAthleteAdded'));
+    document.getElementById('ath-name').value = '';
+    document.getElementById('ath-number').value = '';
+    document.getElementById('ath-category').value = '';
+    document.getElementById('ath-team').value = '';
+    loadAthletes();
+  } catch { showToast(t('toastError'), true); }
+}
+
+async function deleteAthlete(id) {
+  if (!confirm(t('confirmDeleteAthlete'))) return;
+  await fetch(`/api/athletes/${id}`, { method: 'DELETE' });
+  showToast(t('toastAthleteDeleted'));
+  loadAthletes();
+}
+
+// ─── Import .docx ──────────────────────────────────────────────────────
+let selectedFile = null;
+function handleFileSelect(file) {
+  if (!file) return;
+  selectedFile = file;
+  document.getElementById('fileInfo').style.display = 'flex';
+  document.getElementById('fileName').textContent = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+  document.getElementById('importBtn').disabled = false;
+}
+function clearFile() {
+  selectedFile = null;
+  document.getElementById('fileInfo').style.display = 'none';
+  document.getElementById('importBtn').disabled = true;
+  document.getElementById('docxFile').value = '';
+  document.getElementById('importResultBox').style.display = 'none';
+}
+document.getElementById('uploadZone').addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); });
+document.getElementById('uploadZone').addEventListener('dragleave', e => e.currentTarget.classList.remove('drag-over'));
+document.getElementById('uploadZone').addEventListener('drop', e => {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFileSelect(file);
+});
+
+async function importDocx() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('importBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> ${t('toastImporting')}`;
+  try {
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    const res = await fetch('/api/admin/import-athletes', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Import failed');
+
+    const box = document.getElementById('importResultBox');
+    box.style.display = 'block';
+    const teamNote = data.team ? ` (Team: ${data.team})` : '';
+    let html = `<div style="color:var(--success);font-weight:600;">✅ Imported ${data.imported} athlete(s)${teamNote}.</div>`;
+    if (data.errors && data.errors.length) {
+      html += `<div style="color:var(--danger);margin-top:8px;font-weight:600;">Skipped rows:</div><ul style="margin:6px 0 0 18px;color:var(--muted);font-size:.78rem;">${data.errors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    }
+    box.innerHTML = html;
+    showToast(`✅ ${data.imported} athletes imported.`);
+    loadAthletes();
+  } catch (err) {
+    showToast(err.message || t('toastError'), true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<span data-i18n="btnImport">${t('btnImport')}</span>`;
+  }
+}
+
+// ─── Export .docx ──────────────────────────────────────────────────────
+async function exportResults() {
+  const btn = document.getElementById('exportBtn');
+  const original = btn.innerHTML;
+  btn.innerHTML = `<span class="spinner"></span> ${t('toastExporting')}`;
+  try {
+    const res = await fetch('/api/admin/export-results');
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const filename = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'HariSukan_Results.docx';
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(t('toastExported'));
+  } catch {
+    showToast(t('toastError'), true);
+  } finally {
+    btn.innerHTML = original;
+  }
 }
 
 // ─── Competition Types ────────────────────────────────────────────────
