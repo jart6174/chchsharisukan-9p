@@ -69,7 +69,7 @@
 
   /* ── Header ── */
   header {
-    padding: 50px 0 36px;
+    padding: 50px 0 20px;
     text-align: center;
   }
   .school-name {
@@ -100,8 +100,23 @@
     padding:4px 20px; border-radius:999px;
   }
 
+  /* ── Last updated indicator ── */
+  .updated-strip {
+    text-align:center;
+    margin-top:18px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    font-size:.75rem; color:var(--muted);
+  }
+  .updated-dot {
+    width:7px; height:7px; border-radius:50%;
+    background: var(--gold);
+    box-shadow: 0 0 8px rgba(255,215,0,.6);
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+
   /* ── PODIUM ── */
-  .podium-section { padding: 50px 0 20px; }
+  .podium-section { padding: 30px 0 20px; }
   .section-label {
     text-align:center;
     font-size:.72rem; letter-spacing:3px; text-transform:uppercase;
@@ -327,6 +342,11 @@
     <div class="school-name" id="hdr-school">SMJK CHUNG HWA CONFUCIAN</div>
     <h1 id="hdr-title">HARI SUKAN</h1>
     <div class="year-badge">2026</div>
+    <div class="updated-strip">
+      <div class="updated-dot"></div>
+      <span id="updatedLabel">Updated:</span>
+      <span id="updatedTime">—</span>
+    </div>
   </header>
 
   <!-- ══ PODIUM ══ -->
@@ -364,7 +384,7 @@
 <footer>
   <div class="container">
     Made by <span class="brand">Jayden Tan Zheng Yu</span> · 2A · <a href="mailto:jtyztan12@gmail.com">jtyztan12@gmail.com</a><br>
-    IPGC Software · <a href="https://ipgc-website.onrender.com" target="_blank">ipgc-website.onrender.com</a>
+    IPGC Software · <a href="https://jaydentanofficial.onrender.com" target="_blank">jaydentanofficial.onrender.com</a>
   </div>
 </footer>
 
@@ -380,6 +400,7 @@ const STR = {
     leg1: 'Gold = 5 pts', leg2: 'Silver = 3 pts', leg3: 'Bronze = 1 pt',
     pts: 'PTS',
     places: ['1ST PLACE','2ND PLACE','3RD PLACE','4TH PLACE'],
+    updatedLabel: 'Updated:', updatedNever: 'No updates yet',
   },
   ms: {
     podiumLabel: 'RUMAH SUKAN — <span>KEDUDUKAN KESELURUHAN</span>',
@@ -390,6 +411,7 @@ const STR = {
     leg1: 'Emas = 5 mata', leg2: 'Perak = 3 mata', leg3: 'Gangsa = 1 mata',
     pts: 'MATA',
     places: ['TEMPAT KE-1','TEMPAT KE-2','TEMPAT KE-3','TEMPAT KE-4'],
+    updatedLabel: 'Dikemaskini:', updatedNever: 'Belum ada kemaskini',
   }
 };
 let lang = 'en';
@@ -406,6 +428,8 @@ function setLang(l) {
   document.getElementById('leg1').textContent = S.leg1;
   document.getElementById('leg2').textContent = S.leg2;
   document.getElementById('leg3').textContent = S.leg3;
+  document.getElementById('updatedLabel').textContent = S.updatedLabel;
+  renderLastUpdated(lastUpdatedTimestamp);
   if (lastBoardData) { renderPodium(lastBoardData); renderTable(lastBoardData, currentCompLabel); }
 }
 function t(k) { return STR[lang][k]; }
@@ -424,6 +448,7 @@ let currentComp = 'all';
 let currentCompLabel = null;
 let allCompTypes = [];
 let lastBoardData = null;
+let lastUpdatedTimestamp = null;
 
 // ─── Init ──────────────────────────────────────────────────────────────
 async function init() {
@@ -433,11 +458,30 @@ async function init() {
   renderPodium(data);
   renderTable(data, null);
   await renderCompSections();
+  await refreshLastUpdated();
 }
 
 async function fetchBoard(comp) {
   const url = comp ? `/api/scoreboard?competitionType=${encodeURIComponent(comp)}` : '/api/scoreboard';
   return fetch(url).then(r => r.json());
+}
+
+// ─── Last Updated ──────────────────────────────────────────────────────
+async function refreshLastUpdated() {
+  try {
+    const data = await fetch('/api/last-updated').then(r => r.json());
+    lastUpdatedTimestamp = data.lastUpdated;
+    renderLastUpdated(lastUpdatedTimestamp);
+  } catch { /* silent — non-critical display element */ }
+}
+function renderLastUpdated(iso) {
+  const el = document.getElementById('updatedTime');
+  if (!iso) { el.textContent = t('updatedNever'); return; }
+  const d = new Date(iso);
+  el.textContent = d.toLocaleString(lang === 'ms' ? 'ms-MY' : 'en-MY', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
 }
 
 async function loadCompTypes() {
@@ -604,6 +648,7 @@ setInterval(async () => {
   renderPodium(data);
   renderTable(data, currentCompLabel);
   if (currentComp === 'all') renderCompSections();
+  await refreshLastUpdated();
 }, 30000);
 </script>
 </body>
