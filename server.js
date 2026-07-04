@@ -370,7 +370,7 @@ app.get('/api/admin/export-results', wrap(async (req, res) => {
     makeHeaderRow(['PASUKAN / TEAM', 'EMAS', 'PERAK', 'GANGSA', 'MATA'], '1A1A2E'),
     ...VALID_TEAMS.map(team => new TableRow({
       children: [
-        makeCell(team.toUpperCase(), true, (teamColors[team] || 'CCCCCC') + '33'),
+        makeCell(team.toUpperCase(), true, teamColors[team] || 'CCCCCC'),
         makeCell(tally[team].gold, true),
         makeCell(tally[team].silver, true),
         makeCell(tally[team].bronze, true),
@@ -492,6 +492,27 @@ app.get('/api/scoreboard', wrap(async (req, res) => {
 
   board.sort((a, b) => b.points - a.points || b.gold - a.gold || b.silver - a.silver);
   res.json(board);
+}));
+
+// ─── Last Updated (for public page "Updated: [time]" display) ─────────
+app.get('/api/last-updated', wrap(async (req, res) => {
+  const latest = await MedalEntry.findOne({}).sort({ createdAt: -1 }).select('createdAt');
+  res.json({ lastUpdated: latest ? latest.createdAt : null });
+}));
+
+// ─── Factory Reset (wipes ALL data: medals, athletes, competition types, settings) ─
+app.post('/api/admin/factory-reset', wrap(async (req, res) => {
+  if (req.body?.confirm !== 'RESET') {
+    return res.status(400).json({ error: 'Confirmation phrase missing or incorrect.' });
+  }
+  await Promise.all([
+    MedalEntry.deleteMany({}),
+    Athlete.deleteMany({}),
+    CompetitionType.deleteMany({}),
+    Settings.deleteMany({})
+  ]);
+  await Settings.create({ key: 'main', gold: 5, silver: 3, bronze: 1 });
+  res.json({ success: true });
 }));
 
 // ─── Error handler (keeps the process alive on any route error) ────────
