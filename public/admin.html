@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -676,6 +677,21 @@
           Every medal entry is worth the points you set here. The scoreboard totals up all medals per team and ranks them by total points. If two teams are tied on points, the team with more Gold medals ranks higher; if still tied, more Silver medals wins.
         </p>
       </div>
+
+      <!-- Danger Zone -->
+      <div class="card" style="border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04);">
+        <div class="card-title" style="color:var(--danger);" data-i18n="dangerZone">⚠️ Danger Zone</div>
+        <p style="font-size:.88rem;color:var(--muted);line-height:1.7;margin-bottom:16px;" data-i18n="factoryResetDesc">
+          This permanently deletes ALL medal entries, athletes, competition types, and resets points to defaults (5/3/1). This cannot be undone.
+        </p>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label style="color:var(--danger);" data-i18n="typeResetLabel">Type RESET to enable the button</label>
+          <input type="text" id="resetConfirmInput" placeholder="RESET" oninput="document.getElementById('factoryResetBtn').disabled = this.value !== 'RESET'"/>
+        </div>
+        <button class="btn btn-danger" id="factoryResetBtn" onclick="factoryReset()" disabled style="width:100%;justify-content:center;">
+          <span>🗑️</span> <span data-i18n="btnFactoryReset">Factory Reset Everything</span>
+        </button>
+      </div>
     </div>
 
   </main>
@@ -683,7 +699,7 @@
 
 <footer>
   Made by <span class="brand">Jayden Tan Zheng Yu</span> · 2A · <a href="mailto:jtyztan12@gmail.com">jtyztan12@gmail.com</a><br>
-  IPGC Software · <a href="https://ipgc-website.onrender.com" target="_blank">ipgc-website.onrender.com</a>
+  IPGC Software · <a href="https://jaydentanofficial.onrender.com" target="_blank">jaydentanofficial.onrender.com</a>
 </footer>
 
 <!-- Toast -->
@@ -738,6 +754,12 @@ const STRINGS = {
     toastAthleteAdded: '✅ Athlete added!', toastAthleteDeleted: '🗑️ Athlete deleted.',
     toastImporting: 'Importing…', toastExporting: 'Exporting…',
     toastExported: '✅ Export complete!',
+    dangerZone: '⚠️ Danger Zone',
+    factoryResetDesc: 'This permanently deletes ALL medal entries, athletes, competition types, and resets points to defaults (5/3/1). This cannot be undone.',
+    typeResetLabel: 'Type RESET to enable the button',
+    btnFactoryReset: 'Factory Reset Everything',
+    confirmFactoryReset: 'This will permanently delete EVERYTHING. Are you absolutely sure?',
+    toastFactoryReset: '🗑️ Factory reset complete. All data wiped.',
   },
   ms: {
     adminTitle: 'PANEL ADMIN', viewBoard: '🏆 Lihat Papan Skor',
@@ -785,6 +807,12 @@ const STRINGS = {
     toastAthleteAdded: '✅ Atlet ditambah!', toastAthleteDeleted: '🗑️ Atlet dipadam.',
     toastImporting: 'Mengimport…', toastExporting: 'Mengeksport…',
     toastExported: '✅ Eksport selesai!',
+    dangerZone: '⚠️ Zon Bahaya',
+    factoryResetDesc: 'Ini akan memadam SEMUA rekod medal, atlet, jenis pertandingan secara kekal, dan menetapkan semula mata kepada lalai (5/3/1). Tindakan ini tidak boleh dibatalkan.',
+    typeResetLabel: 'Taip RESET untuk aktifkan butang',
+    btnFactoryReset: 'Tetapkan Semula Kilang',
+    confirmFactoryReset: 'Ini akan memadam SEMUA data secara kekal. Adakah anda pasti?',
+    toastFactoryReset: '🗑️ Tetapan semula kilang selesai. Semua data dipadam.',
   }
 };
 let lang = 'en';
@@ -1166,6 +1194,27 @@ async function savePoints() {
     if (!res.ok) throw new Error();
     showToast(t('toastPointsSaved'));
   } catch { showToast(t('toastError'), true); }
+}
+
+// ─── Factory Reset ─────────────────────────────────────────────────────
+async function factoryReset() {
+  if (!confirm(t('confirmFactoryReset'))) return;
+  const btn = document.getElementById('factoryResetBtn');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/admin/factory-reset', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ confirm: 'RESET' })
+    });
+    if (!res.ok) throw new Error();
+    showToast(t('toastFactoryReset'));
+    document.getElementById('resetConfirmInput').value = '';
+    loadDashboard();
+    loadPoints();
+  } catch {
+    showToast(t('toastError'), true);
+    btn.disabled = false;
+  }
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────
