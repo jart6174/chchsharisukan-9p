@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -418,6 +417,11 @@
             <option value="">— Select Competition —</option>
           </select>
         </div>
+
+        <div class="form-group" style="margin-top:16px">
+          <label data-i18n="labelResult">Jarak / Masa (Distance / Time)</label>
+          <input type="text" id="inp-result" data-i18n-ph="phResult" placeholder="e.g. 9.8s or 5.2m — optional"/>
+        </div>
       </div>
 
       <div class="card">
@@ -484,10 +488,11 @@
             <th data-i18n="colCategory">Category</th>
             <th data-i18n="labelCompetition">Competition</th>
             <th data-i18n="colMedal">Medal</th>
+            <th data-i18n="colResult">Jarak/Masa</th>
             <th data-i18n="colDate">Date</th>
             <th></th>
           </tr></thead>
-          <tbody id="entriesBody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
+          <tbody id="entriesBody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -726,6 +731,7 @@ const STRINGS = {
     labelManualName: 'Manual Name (only if not in roster)',
     labelNumber: 'Number', labelTeam: 'Team',
     labelCategory: 'Category', labelCompetition: 'Competition Type',
+    labelResult: 'Jarak / Masa (Distance / Time)', phResult: 'e.g. 9.8s or 5.2m — optional', colResult: 'Jarak/Masa',
     selectTeam: 'Select Team', selectMedal: 'Select Medal',
     medalGold: 'Gold', medalSilver: 'Silver', medalBronze: 'Bronze',
     btnAddMedal: 'Add Medal Entry', addNewComp: 'Add New Competition Type',
@@ -779,6 +785,7 @@ const STRINGS = {
     labelManualName: 'Nama Manual (jika tiada dalam senarai)',
     labelNumber: 'Nombor', labelTeam: 'Pasukan',
     labelCategory: 'Kategori', labelCompetition: 'Jenis Pertandingan',
+    labelResult: 'Jarak / Masa', phResult: 'cth. 9.8s atau 5.2m — pilihan', colResult: 'Jarak/Masa',
     selectTeam: 'Pilih Pasukan', selectMedal: 'Pilih Medal',
     medalGold: 'Emas', medalSilver: 'Perak', medalBronze: 'Gangsa',
     btnAddMedal: 'Tambah Rekod Medal', addNewComp: 'Tambah Jenis Pertandingan Baru',
@@ -925,9 +932,10 @@ async function submitMedal() {
   const comp = document.getElementById('inp-comp').value;
   const team = document.getElementById('inp-team').value;
   const medal = document.getElementById('inp-medal').value;
+  const result = document.getElementById('inp-result').value.trim();
   if (!name || !category || !comp || !team || !medal) { showToast(t('toastFill'), true); return; }
   try {
-    const payload = { contestant:name, category, competitionType:comp, team, medalType:medal };
+    const payload = { contestant:name, category, competitionType:comp, team, medalType:medal, result };
     if (athleteId) payload.athlete = athleteId;
     const res = await fetch('/api/medals', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -941,6 +949,7 @@ async function submitMedal() {
     document.getElementById('inp-comp').value = '';
     document.getElementById('inp-team').value = '';
     document.getElementById('inp-medal').value = '';
+    document.getElementById('inp-result').value = '';
     document.querySelectorAll('.medal-opt').forEach(o => o.className = 'medal-opt');
     document.querySelectorAll('.team-opt').forEach(o => { o.classList.remove('selected'); o.style.borderColor=''; o.style.background=''; });
   } catch { showToast(t('toastError'), true); }
@@ -987,7 +996,7 @@ function filterEntries() {
 function renderEntries(entries) {
   const TEAM_PILL = {'Rumah Kuning':'kuning','Rumah Biru':'biru','Rumah Merah':'merah','Rumah Hijau':'hijau'};
   const tbody = document.getElementById('entriesBody');
-  if (!entries.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No entries found.</td></tr>'; return; }
+  if (!entries.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px">No entries found.</td></tr>'; return; }
   tbody.innerHTML = entries.map(e => `
     <tr>
       <td>${e.contestant}</td>
@@ -995,6 +1004,7 @@ function renderEntries(entries) {
       <td>${e.category}</td>
       <td>${e.competitionType}</td>
       <td><span class="badge badge-${e.medalType}">${e.medalType === 'gold' ? '🥇 Gold' : e.medalType === 'silver' ? '🥈 Silver' : '🥉 Bronze'}</span></td>
+      <td style="color:var(--muted);font-size:.85rem">${e.result || '—'}</td>
       <td style="color:var(--muted);font-size:.8rem">${new Date(e.createdAt).toLocaleDateString()}</td>
       <td><button class="btn btn-danger" style="padding:5px 12px;font-size:.75rem" onclick="deleteEntry('${e._id}')">✕</button></td>
     </tr>`).join('');
