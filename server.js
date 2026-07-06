@@ -71,6 +71,7 @@ const medalEntrySchema = new mongoose.Schema({
   category: { type: String, required: true },
   competitionType: { type: String, required: true },
   medalType: { type: String, required: true, enum: ['gold', 'silver', 'bronze'] },
+  result: { type: String, trim: true }, // jarak/masa — e.g. "9.8s", "5.2m", optional
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -387,11 +388,11 @@ app.get('/api/admin/export-results', wrap(async (req, res) => {
   for (const [cat, catEntries] of Object.entries(byCategory)) {
     if (!catEntries.length) continue;
     entrySections.push(new Paragraph({ text: `Kategori: ${cat}`, heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 100 } }));
-    const rows = [makeHeaderRow(['PESERTA', 'PASUKAN', 'PERTANDINGAN', 'MEDAL'], '2D3748')];
+    const rows = [makeHeaderRow(['PESERTA', 'PASUKAN', 'PERTANDINGAN', 'MEDAL', 'JARAK/MASA'], '2D3748')];
     catEntries.forEach(e => {
       const medalLabel = e.medalType === 'gold' ? 'Emas' : e.medalType === 'silver' ? 'Perak' : 'Gangsa';
       rows.push(new TableRow({
-        children: [makeCell(e.contestant), makeCell(e.team), makeCell(e.competitionType), makeCell(medalLabel)]
+        children: [makeCell(e.contestant), makeCell(e.team), makeCell(e.competitionType), makeCell(medalLabel), makeCell(e.result || '-')]
       }));
     });
     entrySections.push(new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } }));
